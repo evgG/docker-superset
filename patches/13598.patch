@@ -1,0 +1,330 @@
+From ebd5c90003a08d4d137ad7cfaaf42edf44270089 Mon Sep 17 00:00:00 2001
+From: Kamil Gabryjelski <kamil.gabryjelski@gmail.com>
+Date: Fri, 12 Mar 2021 15:32:55 +0100
+Subject: [PATCH 1/5] Create a metric immediately when saved metric is dropped
+
+---
+ .../DndMetricSelect.tsx                       | 42 ++++++++-----------
+ 1 file changed, 18 insertions(+), 24 deletions(-)
+
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx
+index 7fe1b4bfcd96..6b0a83785500 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx
+@@ -241,37 +241,31 @@ export const DndMetricSelect = (props: any) => {
+     togglePopover(false);
+   };
+ 
+-  const { savedMetric, adhocMetric } = useMemo(() => {
+-    if (droppedItem?.type === 'column') {
+-      const itemValue = droppedItem?.value as ColumnMeta;
+-      return {
+-        savedMetric: {} as savedMetricType,
+-        adhocMetric: new AdhocMetric({
+-          column: { column_name: itemValue?.column_name },
+-        }),
+-      };
++  const handleDrop = (item: DatasourcePanelDndItem) => {
++    if (item.type === DndItemType.Metric) {
++      onNewMetric(item.value as Metric);
++    }
++    if (item.type === DndItemType.Column) {
++      setDroppedItem(item);
++      togglePopover(true);
+     }
+-    if (droppedItem?.type === 'metric') {
+-      const itemValue = droppedItem?.value as savedMetricType;
+-      return {
+-        savedMetric: itemValue,
+-        adhocMetric: new AdhocMetric({ isNew: true }),
+-      };
++  };
++
++  const adhocMetric = useMemo(() => {
++    if (droppedItem?.type === DndItemType.Column) {
++      const itemValue = droppedItem?.value as ColumnMeta;
++      return new AdhocMetric({
++        column: { column_name: itemValue?.column_name },
++      });
+     }
+-    return {
+-      savedMetric: {} as savedMetricType,
+-      adhocMetric: new AdhocMetric({ isNew: true }),
+-    };
++    return new AdhocMetric({ isNew: true });
+   }, [droppedItem?.type, droppedItem?.value]);
+ 
+   return (
+     <div className="metrics-select">
+       <DndSelectLabel<OptionValueType, OptionValueType[]>
+         values={value}
+-        onDrop={(item: DatasourcePanelDndItem) => {
+-          setDroppedItem(item);
+-          togglePopover(true);
+-        }}
++        onDrop={handleDrop}
+         canDrop={canDrop}
+         valuesRenderer={valuesRenderer}
+         accept={[DndItemType.Column, DndItemType.Metric]}
+@@ -286,7 +280,7 @@ export const DndMetricSelect = (props: any) => {
+           props.savedMetrics,
+           props.value,
+         )}
+-        savedMetric={savedMetric}
++        savedMetric={{} as savedMetricType}
+         datasourceType={props.datasourceType}
+         isControlledComponent
+         visible={newMetricPopoverVisible}
+
+From 0ccef9afbe491e6a856a238c42c6f0ccaef95594 Mon Sep 17 00:00:00 2001
+From: Kamil Gabryjelski <kamil.gabryjelski@gmail.com>
+Date: Fri, 12 Mar 2021 15:33:17 +0100
+Subject: [PATCH 2/5] Display borders around control boxes when metric or
+ column is dragged
+
+---
+ superset-frontend/src/explore/components/OptionControls.tsx | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/superset-frontend/src/explore/components/OptionControls.tsx b/superset-frontend/src/explore/components/OptionControls.tsx
+index 0e8f777efc05..6a3b66e20a0b 100644
+--- a/superset-frontend/src/explore/components/OptionControls.tsx
++++ b/superset-frontend/src/explore/components/OptionControls.tsx
+@@ -99,7 +99,7 @@ export const DndLabelsContainer = styled.div<{
+ }>`
+   padding: ${({ theme }) => theme.gridUnit}px;
+   border: ${({ canDrop, isOver, theme }) => {
+-    if (isOver && canDrop) {
++    if (canDrop) {
+       return `dashed 1px ${theme.colors.info.dark1}`;
+     }
+     if (isOver && !canDrop) {
+
+From 228a8a0e752670ee943f5c207c3c00b77827dc12 Mon Sep 17 00:00:00 2001
+From: Kamil Gabryjelski <kamil.gabryjelski@gmail.com>
+Date: Fri, 12 Mar 2021 15:33:30 +0100
+Subject: [PATCH 3/5] Fix imports
+
+---
+ .../controls/DndColumnSelectControl/DndFilterSelect.tsx       | 4 ++--
+ .../components/controls/DndColumnSelectControl/types.ts       | 3 ++-
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx
+index e835f9953eb1..10fe621c1455 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx
+@@ -17,8 +17,8 @@
+  * under the License.
+  */
+ import React, { useEffect, useMemo, useState } from 'react';
+-import { logging, SupersetClient, t } from '@superset-ui/core';
+-import { ColumnMeta, Metric } from '@superset-ui/chart-controls';
++import { logging, SupersetClient, t, Metric } from '@superset-ui/core';
++import { ColumnMeta } from '@superset-ui/chart-controls';
+ import { Tooltip } from 'src/common/components/Tooltip';
+ import { OPERATORS } from 'src/explore/constants';
+ import { OptionSortType } from 'src/explore/types';
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts
+index 68f830f5e538..023ab6baac2e 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts
+@@ -17,7 +17,8 @@
+  * under the License.
+  */
+ import { ReactNode } from 'react';
+-import { ColumnMeta, Metric } from '@superset-ui/chart-controls';
++import { Metric } from '@superset-ui/core';
++import { ColumnMeta } from '@superset-ui/chart-controls';
+ import { DatasourcePanelDndItem } from '../../DatasourcePanel/types';
+ import { DndItemType } from '../../DndItemType';
+ 
+
+From 4a70bc55fe4c0a637f4d1ce01afa3e1e96640c03 Mon Sep 17 00:00:00 2001
+From: Kamil Gabryjelski <kamil.gabryjelski@gmail.com>
+Date: Fri, 12 Mar 2021 15:33:42 +0100
+Subject: [PATCH 4/5] Display ghost button
+
+---
+ .../DndColumnSelectControl/DndColumnSelect.tsx        |  1 -
+ .../DndColumnSelectControl/DndFilterSelect.tsx        |  1 -
+ .../DndColumnSelectControl/DndMetricSelect.tsx        |  2 +-
+ .../DndColumnSelectControl/DndSelectLabel.tsx         | 11 ++++++-----
+ .../controls/DndColumnSelectControl/types.ts          |  2 +-
+ 5 files changed, 8 insertions(+), 9 deletions(-)
+
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndColumnSelect.tsx b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndColumnSelect.tsx
+index 130f44b0543e..67c8d615a798 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndColumnSelect.tsx
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndColumnSelect.tsx
+@@ -72,7 +72,6 @@ export const DndColumnSelect = (props: LabelProps) => {
+ 
+   return (
+     <DndSelectLabel<string | string[], ColumnMeta[]>
+-      values={values}
+       onDrop={onDrop}
+       canDrop={canDrop}
+       valuesRenderer={valuesRenderer}
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx
+index 10fe621c1455..928a7b1fa893 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx
+@@ -300,7 +300,6 @@ export const DndFilterSelect = (props: DndFilterSelectProps) => {
+   return (
+     <>
+       <DndSelectLabel<OptionValueType, OptionValueType[]>
+-        values={values}
+         onDrop={(item: DatasourcePanelDndItem) => {
+           setDroppedItem(item.value);
+           togglePopover(true);
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx
+index 6b0a83785500..10d8b7f1360f 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx
+@@ -264,12 +264,12 @@ export const DndMetricSelect = (props: any) => {
+   return (
+     <div className="metrics-select">
+       <DndSelectLabel<OptionValueType, OptionValueType[]>
+-        values={value}
+         onDrop={handleDrop}
+         canDrop={canDrop}
+         valuesRenderer={valuesRenderer}
+         accept={[DndItemType.Column, DndItemType.Metric]}
+         placeholderText={t('Drop columns or metrics')}
++        displayGhostButton={multi || value.length === 0}
+         {...props}
+       />
+       <AdhocMetricPopoverTrigger
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndSelectLabel.tsx b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndSelectLabel.tsx
+index f0ee950726f0..cbe661903688 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndSelectLabel.tsx
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndSelectLabel.tsx
+@@ -18,7 +18,6 @@
+  */
+ import React from 'react';
+ import { useDrop } from 'react-dnd';
+-import { isEmpty } from 'lodash';
+ import { t, useTheme } from '@superset-ui/core';
+ import ControlHeader from 'src/explore/components/ControlHeader';
+ import {
+@@ -30,9 +29,10 @@ import { DatasourcePanelDndItem } from 'src/explore/components/DatasourcePanel/t
+ import Icon from 'src/components/Icon';
+ import { DndColumnSelectProps } from './types';
+ 
+-export default function DndSelectLabel<T, O>(
+-  props: DndColumnSelectProps<T, O>,
+-) {
++export default function DndSelectLabel<T, O>({
++  displayGhostButton = true,
++  ...props
++}: DndColumnSelectProps<T, O>) {
+   const theme = useTheme();
+ 
+   const [{ isOver, canDrop }, datasourcePanelDrop] = useDrop({
+@@ -66,7 +66,8 @@ export default function DndSelectLabel<T, O>(
+         <ControlHeader {...props} />
+       </HeaderContainer>
+       <DndLabelsContainer canDrop={canDrop} isOver={isOver}>
+-        {isEmpty(props.values) ? renderPlaceHolder() : props.valuesRenderer()}
++        {props.valuesRenderer()}
++        {displayGhostButton && renderPlaceHolder()}
+       </DndLabelsContainer>
+     </div>
+   );
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts
+index 023ab6baac2e..9b0bfe81f6c7 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts
+@@ -46,12 +46,12 @@ export interface DndColumnSelectProps<
+   T = string[] | string,
+   O = string[] | string
+ > extends LabelProps<T> {
+-  values?: O;
+   onDrop: (item: DatasourcePanelDndItem) => void;
+   canDrop: (item: DatasourcePanelDndItem) => boolean;
+   valuesRenderer: () => ReactNode;
+   accept: DndItemType | DndItemType[];
+   placeholderText?: string;
++  displayGhostButton?: boolean;
+ }
+ 
+ export type OptionValueType = Record<string, any>;
+
+From 8fc399f0a19ca92fc7b034764a53222e2ec5526d Mon Sep 17 00:00:00 2001
+From: Kamil Gabryjelski <kamil.gabryjelski@gmail.com>
+Date: Mon, 15 Mar 2021 11:08:55 +0100
+Subject: [PATCH 5/5] Rename placeholder to ghostButton
+
+---
+ .../controls/DndColumnSelectControl/DndFilterSelect.tsx     | 2 +-
+ .../controls/DndColumnSelectControl/DndMetricSelect.tsx     | 2 +-
+ .../controls/DndColumnSelectControl/DndSelectLabel.tsx      | 6 +++---
+ .../components/controls/DndColumnSelectControl/types.ts     | 2 +-
+ 4 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx
+index 928a7b1fa893..9e94d0ac63c9 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndFilterSelect.tsx
+@@ -312,7 +312,7 @@ export const DndFilterSelect = (props: DndFilterSelectProps) => {
+           DndItemType.MetricOption,
+           DndItemType.AdhocMetricOption,
+         ]}
+-        placeholderText={t('Drop columns or metrics')}
++        ghostButtonText={t('Drop columns or metrics')}
+         {...props}
+       />
+       <AdhocFilterPopoverTrigger
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx
+index 10d8b7f1360f..eb55faaf36f2 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndMetricSelect.tsx
+@@ -268,7 +268,7 @@ export const DndMetricSelect = (props: any) => {
+         canDrop={canDrop}
+         valuesRenderer={valuesRenderer}
+         accept={[DndItemType.Column, DndItemType.Metric]}
+-        placeholderText={t('Drop columns or metrics')}
++        ghostButtonText={t('Drop columns or metrics')}
+         displayGhostButton={multi || value.length === 0}
+         {...props}
+       />
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndSelectLabel.tsx b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndSelectLabel.tsx
+index cbe661903688..c316d5c5750e 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndSelectLabel.tsx
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/DndSelectLabel.tsx
+@@ -51,11 +51,11 @@ export default function DndSelectLabel<T, O>({
+     }),
+   });
+ 
+-  function renderPlaceHolder() {
++  function renderGhostButton() {
+     return (
+       <AddControlLabel cancelHover>
+         <Icon name="plus-small" color={theme.colors.grayscale.light1} />
+-        {t(props.placeholderText || 'Drop columns')}
++        {t(props.ghostButtonText || 'Drop columns')}
+       </AddControlLabel>
+     );
+   }
+@@ -67,7 +67,7 @@ export default function DndSelectLabel<T, O>({
+       </HeaderContainer>
+       <DndLabelsContainer canDrop={canDrop} isOver={isOver}>
+         {props.valuesRenderer()}
+-        {displayGhostButton && renderPlaceHolder()}
++        {displayGhostButton && renderGhostButton()}
+       </DndLabelsContainer>
+     </div>
+   );
+diff --git a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts
+index 9b0bfe81f6c7..a34bda5e5efe 100644
+--- a/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts
++++ b/superset-frontend/src/explore/components/controls/DndColumnSelectControl/types.ts
+@@ -50,7 +50,7 @@ export interface DndColumnSelectProps<
+   canDrop: (item: DatasourcePanelDndItem) => boolean;
+   valuesRenderer: () => ReactNode;
+   accept: DndItemType | DndItemType[];
+-  placeholderText?: string;
++  ghostButtonText?: string;
+   displayGhostButton?: boolean;
+ }
+ 

@@ -1,0 +1,47 @@
+From e0a4c2d90dbd24153200fff8b80bbe72739b5708 Mon Sep 17 00:00:00 2001
+From: oost <oscar.ostlund@gmail.com>
+Date: Wed, 24 Feb 2021 22:12:58 -0500
+Subject: [PATCH 1/2] Update getInitialState.js
+
+Create dashboardFilters initial state for table components
+---
+ superset-frontend/src/dashboard/reducers/getInitialState.js | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/superset-frontend/src/dashboard/reducers/getInitialState.js b/superset-frontend/src/dashboard/reducers/getInitialState.js
+index c44fde254504..efae4ebd3a4c 100644
+--- a/superset-frontend/src/dashboard/reducers/getInitialState.js
++++ b/superset-frontend/src/dashboard/reducers/getInitialState.js
+@@ -170,7 +170,8 @@ export default function getInitialState(bootstrapData) {
+     // build DashboardFilters for interactive filter features
+     if (
+       slice.form_data.viz_type === 'filter_box' ||
+-      slice.form_data.viz_type === 'filter_select'
++      slice.form_data.viz_type === 'filter_select' || 
++      slice.form_data.viz_type === 'table'
+     ) {
+       const configs = getFilterConfigsFromFormdata(slice.form_data);
+       let { columns } = configs;
+
+From a026a539d897b9bffaab4d408bb1358d93cafee9 Mon Sep 17 00:00:00 2001
+From: Oscar Ostlund <oscar.ostlund@gmail.com>
+Date: Thu, 25 Feb 2021 17:20:42 -0500
+Subject: [PATCH 2/2] Fix prettier error
+
+---
+ superset-frontend/src/dashboard/reducers/getInitialState.js | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/superset-frontend/src/dashboard/reducers/getInitialState.js b/superset-frontend/src/dashboard/reducers/getInitialState.js
+index efae4ebd3a4c..1837f326f190 100644
+--- a/superset-frontend/src/dashboard/reducers/getInitialState.js
++++ b/superset-frontend/src/dashboard/reducers/getInitialState.js
+@@ -170,7 +170,7 @@ export default function getInitialState(bootstrapData) {
+     // build DashboardFilters for interactive filter features
+     if (
+       slice.form_data.viz_type === 'filter_box' ||
+-      slice.form_data.viz_type === 'filter_select' || 
++      slice.form_data.viz_type === 'filter_select' ||
+       slice.form_data.viz_type === 'table'
+     ) {
+       const configs = getFilterConfigsFromFormdata(slice.form_data);

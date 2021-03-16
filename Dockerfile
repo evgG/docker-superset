@@ -17,6 +17,10 @@ RUN wget -qO /tmp/superset.tar.gz https://github.com/apache/superset/archive/${S
 RUN tar xzf /tmp/superset.tar.gz -C ${SUPERSET_HOME} --strip-components=1
 
 # Build assets
+WORKDIR ${SUPERSET_HOME}/
+COPY patches /tmp
+RUN patch -s -p1 < /tmp/13347.patch
+# RUN patch -s -p1 < /tmp/13598.patch
 WORKDIR ${SUPERSET_HOME}/superset-frontend/
 RUN npm install
 RUN npm run build
